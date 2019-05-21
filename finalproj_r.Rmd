@@ -1,0 +1,123 @@
+---
+title: "CMSC 320 - Final Project"
+author: "Rakha Wibisana"
+date: "May 20, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+##Data Science: A Tutorial  
+  
+Data science is a hot topic in today's technologically-driven society, especially with the amount of data that gets accrued every single day. But what exactly is data science and how can it help us? _Data science_ is the process of creating insights in data that help drive decisions or answer questions. These insights can help financial analysts predict market trends, advise doctors where new strains of a virus may pop up, and much more.  
+  
+While data science can take the shape of many forms in a plethora of disciplines, the process of turning data into knowledge can be abstracted into a series of steps known as the data science pipeline. The data science pipeline consists of: preparing the data; performing an exploratory data analysis; conducting a series of hypothesis tests and data analysis methods on the data; and finally, taking the insights that you've gathered from the data and synthesize in a way that other people can make inferences from it.  
+  
+In this tutorial, I will take you across all of these steps of the data science pipeline using a dataset of listings obtained from Airbnb in the San Francisco, CA area. The data can be found at http://insideairbnb.com/get-the-data.html.  
+  
+###About the Dataset  
+  
+I chose to perform an analysis on Airbnb data in San Franscisco, CA because I knew a number of friends who were looking for places in the area to live over the summer for their summer internships. Listening to their conversations, it was apparent that finding a suitable listing for them was difficult because either the prices were too high or the location was too inconvenient for them. Therefore, I decided to analyze the Airbnb data to see if I could make sense of what could result in the variation of pricing between listings.  
+  
+Furthermore, I wanted to create a model that could predict what a listing's average price would be given a certain set of conditions. Being able to determine if a listing is priced fairly is important because it could prevent interns like my friends from getting unfairly charged for their accomodations. Price gouging, or the act of raising prices beyond a normal level to exploit customers, is not unheard of in the housing industry. In 2018, [Airbnb was criticized for allowing hosts to list their rooms for exorbitant prices during the 2018 Super Bowl](http://insideairbnb.com/get-the-data.html). According to the linked article, a two-bedroom apartment in downtown Minneapolis was reported to have changed their listing price from the normal price of $75 per night to an incredible **\$5,000 per night** during the Super Bowl.  
+  
+###Preparing the Data  
+  
+Preparing the data is arguable one of the most time-intensive processes within the data science pipeline. Often, the data that you obtain will come in a way that's not readily usable and must require some modifications. Before we can prepare the data, we must obtain the data. One method of obtaining data involves scraping the internet for usable data. Although I did not use this technique to get my dataset, it's still an important skill to learn as most data will not come in such a nice format. [This article does a good job at taking a person through the process of scraping data from the web](https://medium.freecodecamp.org/an-introduction-to-web-scraping-using-r-40284110c848).  
+  
+If the data is already compiled into a dataset within a file, you can simply load the data into the R environment. Data can come in many filetypes, including .csv, .xlsx, and more. It's important to know how to properly load in the data according to the filetype. The dataset I obtained from Airbnb is in a .csv format, so I'm going to use the _read\_csv()_ function within the **tidyverse** package to read in the file. Other file formats might also require the help of an additional library to load the data. [Take a look at this website to see how to load in other filetypes to R](https://www.statmethods.net/input/importingdata.html).  
+  
+```{r data_cleaning1}
+library(tidyverse)
+# load in the csv file. col_names is set to T because my data has headers that should be separated from the observations in the data
+data <- read_csv("data/listings.csv", col_names=T)
+```  
+  
+Once the dataset has been loaded in, we can start to prepare the data. This includes finding the data and manipulating it in a way that allows it to be analyzed more easily. Many of the methods used in data science to analyze a dataset assume that the data is formatted in a tidy way. Data is _tidy_ when:  
+1. **Each row in the data table corresponds to a single entity or relationship.** In other words, each row should only contain information regarding one object, such as a single listing for Airbnb and not more.  
+2. **Each column in a data table corresponds to single attribute or variable that describes each entity.** An example of when you would separate a column into multiple columns is if a column contained information about both gender and age, encoded as 'm24' denoting a male who was 24 years old. This should be separated into two columns - one for gender and another for age.  
+3. **Each data table corresponds to a single entity set or relationship.** For example, a data table containing information about listings and personal customer information would better be separated into two data tables - one for listings and another for the customer information.  
+  
+For more information about what constitutes tidy data, as well as how to make data tidy, you can [check out this tutorial](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html) that goes into detail about this topic.  
+  
+The dataset that I'm working with is very tidy as is, so I don't have to worry too much about modifying it too much. However, let's take a look at just how many attributes are contained within the dataset itself. A good way to check the dimensions of the data is through the function _dim()_.  
+  
+```{r data_cleaning2}
+# checking dimensions of the data
+dim(data)
+```  
+  
+Since tables are read in row by column format, the dimensions for the dataset are returned respectively. This output means that the dataset has **7353 listings** and each listing has **106 attributes**. For our actual analysis of the data, 106 attributes is far too many to look at! One of the goals of data science is create the most parsimonious, or simple, model for our data. One way to achieve this is by limiting the amount of attributes included. In order to do this, I will use the _select()_ function within the _tidyverse_ package from before. For future reference, the [tidyverse package](https://www.tidyverse.org/) is one of the most useful packages in data science within R because it provides many functions and shortcuts for processing the data.  
+  
+One thing to note about selecting attributes is that you ideally want to select attributes that most observations within your dataset have actual values for, and don't have missing values. Missing values in R are denoted with an _N/A_ and should be handled during the data preparation phase since the methods we use to analyze the data can't handle missing values. One way to check how many observations actually have values for a given attribute is through the _is.na()_ function. You can access a vector of an attribute using the '$' operator. Here's an example of how you would check for missing values:  
+  
+```{r data_cleaning3}
+# check how many observations have missing values for the square_feet attribute
+sum(is.na(data$square_feet))
+```  
+  
+As you can see, 7227 of the 7353 entities have missing values for the square_feet attribute. Therefore, we shouldn't include this attribute within our dataset for analysis. If an attribute has some entities that are missing values, you can either choose to delete those observations with missing values, or change their values to work with the dataset. [Here's a good article on how to handle missing data in R](https://medium.com/coinmonks/dealing-with-missing-data-using-r-3ae428da2d17).  
+  
+Selecting attributes can be a tricky process, because although you want to minimize the amount of variables in your model, you also don't want to leave out any potentially important variables that could help explain the data better - also known as omitted variable bias. Having domain knowledge in the subject of inquiry can help a lot in trying to select the attributes in a model. Using my limited knowledge of what factors might influence a listing's price, I will select the attributes in the following code snippet. I will also remove any entities that have _N/A_ in any columns from the dataset. 
+  
+```{r data_cleaning4}
+# create a column vector of selected attributes using c()
+selected_cols <- c("host_response_time","host_response_rate","host_is_superhost","host_listings_count","host_has_profile_pic","host_identity_verified","neighbourhood_cleansed","property_type", "room_type", "accommodates","bathrooms","bedrooms","beds","bed_type","amenities", "price", "security_deposit","cleaning_fee","guests_included","extra_people","minimum_nights","maximum_nights","availability_30","availability_60","availability_90","availability_365","number_of_reviews","review_scores_rating","review_scores_accuracy","review_scores_cleanliness","review_scores_checkin","review_scores_communication","review_scores_location","review_scores_value","cancellation_policy","reviews_per_month")
+
+# refine the original dataset to only contain the selected attributes
+data_min <- data %>%
+  select(selected_cols)
+
+# replace "N/A" values with null
+data_min <- na_if(data_min, "N/A")
+
+# remove any entities with N/A or null
+data_min2 <- na.omit(data_min)
+
+# check how many observations remain
+nrow(data_min2)
+```  
+  
+Often times, the types of the attributes you select might not be the correct types needed for analysis. One instance of an incorrect type is when the values are simply encoded as a different representation of itself. In my dataset, the "host_response_rate" attribute has values that are encoded as chars, when I want them as numerics. I can use a combination of string parsing and type conversion to convert the type into what I need it to be. Another case of an incorrect type is when a variable that is categorical in nature isn't encoded as such. In my dataset, the "host_is_superhost" attribute should be a binary variable where the value is equal to 1 when the host is a superhost, instead of having char values of 't' and 'f'. This conversion can be done through the _factor()_ function.  
+  
+There may even be instances where you have to split an attribute into multiple columns in order to maintain a tidy dataset where only one attribute is included within a column. In my dataset, "amenities" is a list of amenities that the host provides for. In order to tidy the data, I will split "amenities" into a series of boolean attributes where the value is 1 if the host provides it (e.g. has_internet, has_wifi, etc.). For the purposes of this tutorial, I will only create variables for TV, Internet, Wifi, Kitchen, Heating, Air Conditioning, Dryer, and Washer.  
+  
+```{r data_cleaning5}
+# parse amenities into separate boolean attributes and removes amenities
+data_min3 <- data_min2 %>%
+  mutate(has_TV = str_detect(data_min2$amenities, "TV"), has_internet = str_detect(data_min2$amenities, "Internet"), has_wifi = str_detect(data_min2$amenities, "Wifi"), has_kitchen = str_detect(data_min2$amenities, "Kitchen"), has_heating = str_detect(data_min2$amenities, "Heating"), has_ac = str_detect(data_min2$amenities, "Air conditioning"), has_dryer = str_detect(data_min2$amenities, "Dryer"), has_washer = str_detect(data_min2$amenities, "Washer")) %>%
+  select(-c("amenities"))
+
+# convert host_response_rate from percentage char to decimal (numeric)
+data_min3 <- data_min3 %>%
+  mutate(host_response_rate = as.numeric(sub("%", "", data_min3$host_response_rate))/100)
+
+# convert price from a currency char to a decimal (numeric)
+data_min3 <- data_min3 %>%
+  mutate(price = as.numeric(sub("[$]", "", data_min3$price)))
+
+# convert security deposit from a currency char to a decimal (numeric)
+data_min3 <- data_min3 %>%
+  mutate(security_deposit = as.numeric(sub("[$]", "", data_min3$security_deposit)))
+
+# convert cleaning fee from a currency char to a decimal (numeric)
+data_min3 <- data_min3 %>%
+  mutate(cleaning_fee = as.numeric(sub("[$]", "", data_min3$cleaning_fee)))
+
+# convert extra people from a currency char to a decimal (numeric)
+data_min3 <- data_min3 %>%
+  mutate(extra_people = as.numeric(sub("[$]", "", data_min3$extra_people)))
+
+# select the columns to convert to factors
+factor_columns <- c("host_response_time","host_is_superhost","host_has_profile_pic","host_identity_verified","neighbourhood_cleansed","property_type", "room_type","bed_type", "cancellation_policy")
+
+# factors the categorical variables specified by factor_columns
+data_min3[, factor_columns] <- lapply(data_min3[, factor_columns], as.factor)
+```  
+  
+Now that the data has been prepared, we can continue to performing an exploratory data analysis.  
+  
+###Exploratory Data Analysis  
+  
