@@ -165,6 +165,11 @@ data_min4 <- data_min3 %>%
   mutate(log.price = log(price)) %>%
   select(-c("price"))
 
+# remove -Inf log.price value since there is only one instance
+sum(data_min4$log.price == -Inf)
+data_min4 <- data_min4 %>%
+  filter(log.price != -Inf)
+
 # plot the histogram of price
 data_min4 %>%
   ggplot(aes(log.price)) +
@@ -173,4 +178,69 @@ data_min4 %>%
   
 As we look at the histogram of log.price, we can see that the data is more normally distributed now. Be cautious about transformations though, as [it can affect the way you interpret the data](https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/). [Check out this website for more information on how to perform transformations in R](http://rcompanion.org/handbook/I_12.html).  
   
-###Hypothesis Tests and Data Analysis Methods
+###Hypothesis Tests and Data Analysis Methods  
+  
+[Hypothesis tests](https://stattrek.com/hypothesis-test/hypothesis-testing.aspx) are an essential part of data science because they tell us whether or not the results we observe are statistically significant. In a hypothesis test, we have the null hypothesis, which we assume to be true, and the alternative hypothesis. Based on the significance level (which is usually $\alpha$ = 0.05 unless otherwise stated), we can look at the p-value of a test statistic to see if the results observed are in fact statistically significant. The p-value is the probability that the results of the distribution are greater than or equal to the observed results, assuming the null hypothesis is true. If the p-value is less than the significance level, then we reject the null hypothesis in favor of the alternative hypothesis; otherwise, we fail to reject the null hypothesis.  
+  
+Many hypothesis tests have a null hypothesis that assumes that there is "no difference" between two models that are being compared. For example, when we create a linear model of the relationship between price and the other predictors in the dataset, the resulting summary table gives us the p-values of each attribute and its effect on price.  
+  
+```{r hyp_test1}
+# create linear regression model of other predictors on log.price
+linear_model <- lm(log.price~., data=data_min4)
+# summary of linear model fit
+summary(linear_model)
+```  
+  
+We can look at the p-value of each attribute to see if that attribute is significant in predicting price, holding all other predictors constant. For example, if we look at the p-value of maximum_nights, we see that it is 0.575 which is greater than our significance level of 0.05. Therefore, we would consider removing it from the model as its effects on price aren't statistically significant, meaning that a change in the maximum amount of nights that a person can stay doesn't affect price.  
+  
+On the other hand, if we look at the p-value for minimum_nights, we see that its p-value is < 2e-16, which is much less than 0.05. Therefore, we would keep minimum_nights in the linear model as it has a statistically significant effect on price, meaning that a change in the minimum amount of nights that a person can stay does in fact affect the price of the listing.  
+  
+[Linear regression](https://www.geeksforgeeks.org/ml-linear-regression/) is a supervised machine learning method, meaning that it predicts a response variable given a set of predictors. One of the pitfalls of linear regression is that the inclusion of insignificant predictors can greatly weaken the overall predicting power of the model. In this case, hypothesis tests can help us select the variables that go into the model. We can remove the insignificant predictors at a 5% level from our model. Once we obtain the reduced model, we can perform an [ANOVA test](https://bookdown.org/ndphillips/YaRrr/comparing-regression-models-with-anova.html) to see if the reduced model is in fact a better fit for the data. The null hypothesis of the ANOVA test claims that the complex model is a worse or equal fit to the data than the reduced model. Therefore, if the p-value of the F-statistic from the ANOVA table is less than the significance level of 0.05, then we choose the more complex (full) model.  
+  
+```{r hyptest2}
+# select attributes that aren't significant or have at least one significant level in their factor
+insignificant_predictors <- c("host_response_time", "host_response_rate", "host_has_profile_pic", "bathrooms", "bed_type", "security_deposit", "cleaning_fee", "extra_people", "maximum_nights", "review_scores_accuracy", "review_scores_communication", "has_internet", "has_kitchen", "has_heating", "has_dryer", "has_washer")
+
+# remove insignificant predictors
+data_reduced <- data_min4 %>%
+  select(-c(insignificant_predictors))
+
+# create new reduced linear model
+lm_reduced <- lm(log.price~., data=data_reduced)
+
+# perform anova test with reduced model and full model
+anova(lm_reduced, linear_model)
+```  
+  
+As we can see from the results of the ANOVA table, the F-statistic is 0.015 which is less than 0.05. Therefore, we reject the null hypothesis and choose the more complex (full) model. In this case, removing the insignificant predictors from the model didn't make the model better overall at predicting log.price.  
+  
+Before we accept the linear regression model, we have to check the residuals of the linear model to make sure that they meet the [assumptions of linearity](http://r-statistics.co/Assumptions-of-Linear-Regression.html). Using _plot()_ on the linear model and _hist_ on the residuals of the linear model can let us see if the assumptions are met. The four assumptions of a linear regression model are **l**inearity, **i**ndependence, **n**ormality, and **e**qual spread of the residuals.    
+  
+```{r hyptest3}
+# plot the graphs for the linear model checking the residuals
+plot(linear_model)
+
+# check the histogram of residuals to see if it's normally distributed
+hist(linear_model$residuals)
+```  
+  
+* Linearity: the residuals vs. fitted plot has randomly scattered residuals centered around the mean = 0. Therefore, this assumption is checked.
+* Independence: the Scale-Location plot shows no visible pattern in the fitted values plot. Therefore, independence is checked.
+* Normality: the histogram of the residuals has a roughly normal distribution. Therefore, normality is checked.
+* Equal Spread: the residuals vs. fitted plot has equal variance throughout the fitted values and there is no apparent funnel shape in the residuals. Therefore, equal spread is checked.  
+  
+All the assumptions for the linear regression model are met, so this is a valid linear regression model.  
+  
+###Insights  
+  
+The last step of the data science pipeline is to create insights from the data and the models that describe it. In this tutorial, we walked through how to create a model using linear regression. Linear regression is great because it is relatively more interpretable than other machine learning methods such as machine learning, which is a black box meaning that the way it actually works is hard to interpret.  
+  
+On the other hand, in linear regression, we can see exactly which predictors are the most significant in predicting the response by looking at which ones have the smallest p-values. For example, in our model a significant predictor was bedrooms which had an extremely small p-value of < 2e-16. This makes sense, as the number of bedrooms that a listing has would likely increase the price of the listing as that number went up.  
+  
+Furthermore, by looking at the coefficients of each predictor, we can see if an increase in that predictor will cause an increase or decrease in the response. Going back to the bedroom attribute, it had a coefficient of 1.772e-01. Since the coefficient is positive, we can determine that as the number of bedrooms increases, so does the price of the listing. However, since we had to perform a log transformation on price in our model, the exact interpretation of the relationship between the attribute and the response becomes a little tricky. Since we took the log of price, price no longer changes by the coefficient of the predictor, but rather by (exp(predictor) - 1)\*100 percent. For example, for each one unit increase of bedrooms, the price of the listing increases by (exp(1.772e-01) - 1)\*100 percent on average, while holding all other predictors fixed.  
+  
+Combining both p-values and coefficients, we can see which neighborhoods in this dataset have more expensive listings on average. For example, the Castro/Upper Market neighborhood has a p-value < 2e-16 and a coefficient of 4.592e-01. This means that listings in the Castro/Upper Market neighborhood are more expensive than the baseline neighborhood, Bayview. With this information, a student interning in San Francisco, CA can choose to target Airbnb listings in areas that are more affordable to them.  
+  
+###Conclusion  
+  
+I hope that this tutorial did well to explain the basics of how to utilize the data science pipeline. In this tutorial, we covered how to collect and clean data for analysis; how to perform an exploratory data analysis of an attribute; perform hypothesis tests and create a simple supervised machine learning model through linear regression; and extract valuable insights from the model that satisfied our initial goal of trying to understand what variables had the most influence on a listing's price. Thank you for reading through my tutorial, and I hope that you were able to learn a little (or a lot) about data science along the way!
