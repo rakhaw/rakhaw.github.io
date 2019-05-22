@@ -51,7 +51,7 @@ dim(data)
   
 Since tables are read in row by column format, the dimensions for the dataset are returned respectively. This output means that the dataset has **7353 listings** and each listing has **106 attributes**. For our actual analysis of the data, 106 attributes is far too many to look at! One of the goals of data science is create the most parsimonious, or simple, model for our data. One way to achieve this is by limiting the amount of attributes included. In order to do this, I will use the _select()_ function within the _tidyverse_ package from before. For future reference, the [tidyverse package](https://www.tidyverse.org/) is one of the most useful packages in data science within R because it provides many functions and shortcuts for processing the data.  
   
-One thing to note about selecting attributes is that you ideally want to select attributes that most observations within your dataset have actual values for, and don't have missing values. Missing values in R are denoted with an _N/A_ and should be handled during the data preparation phase since the methods we use to analyze the data can't handle missing values. One way to check how many observations actually have values for a given attribute is through the _is.na()_ function. You can access a vector of an attribute using the '$' operator. Here's an example of how you would check for missing values:  
+One thing to note about selecting attributes is that you ideally want to select attributes that most observations within your dataset have actual values for, and don't have missing values. Handling missing values is typically a part of exploratory data analysis, but we can also handle missing values during the preparation phase. Missing values in R are denoted with an _N/A_ and should be handled during the data preparation phase since the methods we use to analyze the data can't handle missing values. One way to check how many observations actually have values for a given attribute is through the _is.na()_ function. You can access a vector of an attribute using the '$' operator. Here's an example of how you would check for missing values:  
   
 ```{r data_cleaning3}
 # check how many observations have missing values for the square_feet attribute
@@ -92,23 +92,23 @@ data_min3 <- data_min2 %>%
 
 # convert host_response_rate from percentage char to decimal (numeric)
 data_min3 <- data_min3 %>%
-  mutate(host_response_rate = as.numeric(sub("%", "", data_min3$host_response_rate))/100)
+  mutate(host_response_rate = as.numeric(gsub("%", "", data_min3$host_response_rate))/100)
 
 # convert price from a currency char to a decimal (numeric)
 data_min3 <- data_min3 %>%
-  mutate(price = as.numeric(sub("[$]", "", data_min3$price)))
+  mutate(price = as.numeric(gsub("[$,]", "", data_min3$price)))
 
 # convert security deposit from a currency char to a decimal (numeric)
 data_min3 <- data_min3 %>%
-  mutate(security_deposit = as.numeric(sub("[$]", "", data_min3$security_deposit)))
+  mutate(security_deposit = as.numeric(gsub("[$,]", "", data_min3$security_deposit)))
 
 # convert cleaning fee from a currency char to a decimal (numeric)
 data_min3 <- data_min3 %>%
-  mutate(cleaning_fee = as.numeric(sub("[$]", "", data_min3$cleaning_fee)))
+  mutate(cleaning_fee = as.numeric(gsub("[$,]", "", data_min3$cleaning_fee)))
 
 # convert extra people from a currency char to a decimal (numeric)
 data_min3 <- data_min3 %>%
-  mutate(extra_people = as.numeric(sub("[$]", "", data_min3$extra_people)))
+  mutate(extra_people = as.numeric(gsub("[$,]", "", data_min3$extra_people)))
 
 # select the columns to convert to factors
 factor_columns <- c("host_response_time","host_is_superhost","host_has_profile_pic","host_identity_verified","neighbourhood_cleansed","property_type", "room_type","bed_type", "cancellation_policy")
@@ -121,3 +121,56 @@ Now that the data has been prepared, we can continue to performing an explorator
   
 ###Exploratory Data Analysis  
   
+Often in data science, we want to perform an exploratory data analysis (EDA) of the data to get a better understanding of it. EDA is also necessary to see if certain assumptions are held up when performing data analysis procedures. For example, later on when we create a linear regression model of the data with price as the response variable, we want to check to make sure the residuals comply by the assumptions of linear regression. EDA encompasses visualizing the data, performing summary statistics, transforming the data if necessary, and handling missing data. We covered how to handle missing data in the previous section, so in this section we will cover the other three areas.  
+  
+####Visualizing the Data  
+  
+Visualizing data can be accomplished by plotting the data points of interest on a plot and examining it for any visible patterns. Plotting data in R is made easy through the _ggplot2_ package. The package is also included within _tidyverse_.[This resource is a good reference for learning how to use ggplot2 in R to visualize data](https://datacarpentry.org/R-ecology-lesson/04-visualization-ggplot2.html).  
+  
+To give an example of how we can visualize data in R, we will plot the response variable of interest in our tutorial, price. To observe any patterns in price, we will analyze its histogram.  
+  
+```{r eda1}
+# Plotting the histogram for price using ggplot2
+data_min3 %>%
+  ggplot(aes(price)) +
+  geom_histogram()
+```  
+  
+####Summary Statistics  
+  
+When performing a visual analysis of the data, try and determine the shape, outliers, center, and spread - also known as SOCS! These are what make up the summary statistics of data.  
+  
+The first thing we can observe from this histogram is its **shape**. Looking at the histogram, we can determine that it is skewed right, as shown by the long tail of values on the right side. We can also see that the distribution is unimodal, meaning that it has one mode, or maximum. [This website offers a brief, yet helpful explanation of how to observe the shape of a distribution](https://mathbitsnotebook.com/Algebra1/StatisticsData/STShapes.html).  
+  
+The next visual observation that we can identify is if there are any **outliers**. Outliers are points that stray far away from the main distribution. In our case, there are outliers towards the upper end of the price range all the way up to $8000.  
+  
+The third characteristic we observe is the **center** of the distribution. The two main measures of spread are mean and median. The mean of the distribution is the best estimate for center since it is the average of all values. However, if the distribution is skewed like the distribution for price is, then the mean becomes skewed in the direction of the tail. Therefore, in skewed distributions, median is a better measure of center. [A recap of central tendency can be found on this website](http://condor.depaul.edu/sjost/it223/documents/central.htm).  
+  
+The fourth observation we can see is the distribution's **spread**. Spread is the measure of variability in the data. One measure of spread is range, and in the price distribution, we can see that the range of values go from \$0 all the way up to \$8000. Looking at just the distribution can be hard to estimate the exact range, which is why we then observe the five-number summary of the data.  
+  
+```{r eda2}
+# get summary statistics for price
+summary(data_min3$price)
+```  
+  
+From the five-number summary, we can see the minimum, maximum, first quartile, median, and third quartile of the data. We can see that although the range is 8000, the median of the prices is $150, meaning that this distribution is heavily skewed to the right. However, this type of pattern in pricing is not abnormal, as a lot of financial measures in the real world have a majority of their values on the "lower" end, while having less values on the "high" end. In order to accomodate for skewing, we can perform transformations on variables such as price.  
+  
+####Transforming the Data  
+  
+Transforming data in R is useful because it can help change data in a way that allows it to be used in certain data analysis methods. One example where data transformations are necessary is evident in machine learning when creating a neural network. Data transformations in the form of standardizing the data are necessary for a neural network to be created due to its use of linear combinations between nodes. In our case, we can use transformations in the form of a logarithmic transform to unskew the price attribute.  
+  
+```{r eda3}
+# log transform of price
+data_min4 <- data_min3 %>%
+  mutate(log.price = log(price)) %>%
+  select(-c("price"))
+
+# plot the histogram of price
+data_min4 %>%
+  ggplot(aes(log.price)) +
+  geom_histogram()
+```  
+  
+As we look at the histogram of log.price, we can see that the data is more normally distributed now. Be cautious about transformations though, as [it can affect the way you interpret the data](https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/). [Check out this website for more information on how to perform transformations in R](http://rcompanion.org/handbook/I_12.html).  
+  
+###Hypothesis Tests and Data Analysis Methods
