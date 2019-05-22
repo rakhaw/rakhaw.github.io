@@ -605,7 +605,7 @@ anova(lm_reduced, linear_model)</code></pre>
 ## 2   4268 590.84 21    5.1776 1.781 0.01546 *
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
-<p>As we can see from the results of the ANOVA table, the F-statistic is 0.015 which is less than 0.05. Therefore, we reject the null hypothesis and choose the more complex (full) model. In this case, removing the insignificant predictors from the model didn’t make the model better overall at predicting log.price.</p>
+<p>As we can see from the results of the ANOVA table, the p-value of the F-statistic is 0.015 which is less than 0.05. Therefore, we reject the null hypothesis and choose the more complex (full) model. In this case, removing the insignificant predictors from the model didn’t make the model better overall at predicting log.price.</p>
 <p>Before we accept the linear regression model, we have to check the residuals of the linear model to make sure that they meet the <a href="http://r-statistics.co/Assumptions-of-Linear-Regression.html">assumptions of linearity</a>. Using <em>plot()</em> on the linear model and <em>hist</em> on the residuals of the linear model can let us see if the assumptions are met. The four assumptions of a linear regression model are <strong>l</strong>inearity, <strong>i</strong>ndependence, <strong>n</strong>ormality, and <strong>e</strong>qual spread of the residuals.</p>
 <pre class="r"><code># plot the graphs for the linear model checking the residuals
 plot(linear_model)</code></pre>
